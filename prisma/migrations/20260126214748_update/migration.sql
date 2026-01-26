@@ -38,6 +38,7 @@ CREATE TABLE "accounts" (
     "userId" TEXT NOT NULL,
     "accountId" TEXT NOT NULL,
     "providerId" TEXT NOT NULL,
+    "password" TEXT,
     "accessToken" TEXT,
     "refreshToken" TEXT,
     "expiresAt" TIMESTAMP(3),
@@ -117,7 +118,28 @@ CREATE TABLE "reviews" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE INDEX "users_email_idx" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_role_idx" ON "users"("role");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "sessions_token_key" ON "sessions"("token");
+
+-- CreateIndex
+CREATE INDEX "sessions_userId_idx" ON "sessions"("userId");
+
+-- CreateIndex
+CREATE INDEX "sessions_expiresAt_idx" ON "sessions"("expiresAt");
+
+-- CreateIndex
+CREATE INDEX "accounts_userId_idx" ON "accounts"("userId");
+
+-- CreateIndex
+CREATE INDEX "accounts_providerId_idx" ON "accounts"("providerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "accounts_providerId_accountId_key" ON "accounts"("providerId", "accountId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "categories_name_key" ON "categories"("name");
@@ -126,22 +148,37 @@ CREATE UNIQUE INDEX "categories_name_key" ON "categories"("name");
 CREATE UNIQUE INDEX "categories_slug_key" ON "categories"("slug");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "medicines_slug_key" ON "medicines"("slug");
-
--- CreateIndex
 CREATE INDEX "medicines_sellerId_idx" ON "medicines"("sellerId");
 
 -- CreateIndex
 CREATE INDEX "medicines_categoryId_idx" ON "medicines"("categoryId");
 
 -- CreateIndex
+CREATE INDEX "medicines_slug_idx" ON "medicines"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "medicines_sellerId_slug_key" ON "medicines"("sellerId", "slug");
+
+-- CreateIndex
 CREATE INDEX "orders_customerId_idx" ON "orders"("customerId");
+
+-- CreateIndex
+CREATE INDEX "orders_status_idx" ON "orders"("status");
+
+-- CreateIndex
+CREATE INDEX "orders_createdAt_idx" ON "orders"("createdAt");
 
 -- CreateIndex
 CREATE INDEX "order_items_orderId_idx" ON "order_items"("orderId");
 
 -- CreateIndex
 CREATE INDEX "order_items_sellerId_idx" ON "order_items"("sellerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "order_items_orderId_medicineId_key" ON "order_items"("orderId", "medicineId");
+
+-- CreateIndex
+CREATE INDEX "reviews_medicineId_idx" ON "reviews"("medicineId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "reviews_customerId_medicineId_key" ON "reviews"("customerId", "medicineId");
