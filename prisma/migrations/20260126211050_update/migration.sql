@@ -11,7 +11,6 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "image" TEXT,
-    "password" TEXT,
     "phone" TEXT,
     "role" "Role" NOT NULL DEFAULT 'CUSTOMER',
     "isBanned" BOOLEAN NOT NULL DEFAULT false,
