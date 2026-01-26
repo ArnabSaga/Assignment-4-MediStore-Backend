@@ -1,14 +1,161 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  SELLER
+  ADMIN
+}
+
+enum OrderStatus {
+  PLACED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String    @db.VarChar(255)
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  password      String? 
+  phone         String?
+  role          Role      @default(CUSTOMER)
+  isBanned      Boolean   @default(false)
+
+  medicines Medicine[] @relation("SellerMedicines")
+  orders    Order[]    @relation("CustomerOrders")
+  reviews   Review[]
+  sessions  Session[]
+  accounts  Account[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id           String    @id @default(uuid())
+  userId       String
+  accountId    String
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?    @db.Text
+  medicines   Medicine[]
+  createdAt   DateTime   @default(now())
+
+  @@map("categories")
+}
+
+model Medicine {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(255)
+  slug         String   @unique
+  description  String?  @db.Text
+  price        Decimal  @db.Decimal(10, 2)
+  stock        Int      @default(0)
+  manufacturer String
+  imageUrl     String?
+  isActive     Boolean  @default(true)
+
+  categoryId String
+  sellerId   String
+
+  category Category @relation(fields: [categoryId], references: [id])
+  seller   User     @relation("SellerMedicines", fields: [sellerId], references: [id])
+
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@map("medicines")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  customerId      String
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  status          OrderStatus @default(PLACED)
+  shippingAddress String      @db.Text
+
+  customer User        @relation("CustomerOrders", fields: [customerId], references: [id])
+  items    OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String
+  medicineId String
+  sellerId   String
+  quantity   Int
+  price      Decimal @db.Decimal(10, 2)
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([sellerId])
+  @@map("order_items")
+}
+
+model Review {
+  id         String @id @default(uuid())
+  rating     Int    @default(5)
+  comment    String @db.Text
+
+  customerId String
+  medicineId String
+
+  customer User     @relation(fields: [customerId], references: [id])
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([customerId, medicineId])
+  @@map("reviews")
 }
