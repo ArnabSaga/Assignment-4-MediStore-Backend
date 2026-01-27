@@ -5,6 +5,10 @@ import { toNodeHandler } from "better-auth/node";
 
 import { auth } from "./lib/auth";
 
+// Route imports
+
+import { UserRouter } from "./modules/users/user.route";
+
 import { notFound } from "./middleware/NotFound";
 import globalErrorHandler from "./middleware/globalErrorHandler";
 
@@ -19,14 +23,22 @@ app.use(
   })
 );
 
+// Auth routes
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
+// API Routes
+
+app.use("/api/v1/users", UserRouter);
+
+// Home route
 app.get("/", (req: Request, res: Response) => {
-  res.send("Hello world");
+  res.send("Hello World To Medi Store");
 });
 
+// 404 handler
 app.use(notFound);
 
+// Global error handler
 app.use(globalErrorHandler);
 
 export default app;
