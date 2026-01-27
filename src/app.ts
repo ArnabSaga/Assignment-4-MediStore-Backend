@@ -8,6 +8,7 @@ import { auth } from "./lib/auth";
 // Route imports
 import { UserRouter } from "./modules/users/user.route";
 import { CategoryRouter } from "./modules/categories/category.route";
+import { MedicineRouter } from "./modules/medicines/medicine.route";
 
 import { notFound } from "./middleware/NotFound";
 import globalErrorHandler from "./middleware/globalErrorHandler";
@@ -29,6 +30,7 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 // API Routes
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/categories", CategoryRouter);
+app.use("/api/v1/medicines", MedicineRouter);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {
