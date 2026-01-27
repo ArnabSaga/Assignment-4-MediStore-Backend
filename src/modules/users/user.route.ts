@@ -2,10 +2,11 @@ import express, { Router } from "express";
 import auth, { UserRole } from "../../middleware/auth.middleware";
 import { UserController } from "./user.controller";
 
-const router = express.Router();
+//* UserRouter
 
-// Customer and Seller routes
-router.get(
+const userRouter = express.Router();
+
+userRouter.get(
   "/me",
   auth({
     roles: [UserRole.CUSTOMER, UserRole.SELLER, UserRole.ADMIN],
@@ -14,40 +15,48 @@ router.get(
   UserController.getCurrentUser
 );
 
-router.put(
+userRouter.put(
   "/profile",
   auth({
-    roles: [UserRole.CUSTOMER, UserRole.SELLER],
+    roles: [UserRole.CUSTOMER, UserRole.SELLER, UserRole.ADMIN],
     requireVerifiedEmail: true,
   }),
   UserController.updateUserProfile
 );
 
-// Admin routes
-router.get("/", auth({ roles: [UserRole.ADMIN] }), UserController.getAllUsers);
+//* AdminUserRouter
 
-router.get(
+const adminUserRouter = express.Router();
+
+adminUserRouter.get(
+  "/",
+  auth({ roles: [UserRole.ADMIN] }),
+  UserController.getAllUsers
+);
+
+adminUserRouter.get(
   "/:id",
   auth({ roles: [UserRole.ADMIN] }),
   UserController.getUserById
 );
 
-router.patch(
+adminUserRouter.patch(
   "/:id/status",
   auth({ roles: [UserRole.ADMIN] }),
   UserController.updateUserStatus
 );
 
-router.patch(
+adminUserRouter.patch(
   "/:id/role",
   auth({ roles: [UserRole.ADMIN] }),
   UserController.changeRole
 );
 
-router.delete(
+adminUserRouter.delete(
   "/:id",
   auth({ roles: [UserRole.ADMIN] }),
   UserController.deleteUser
 );
 
-export const UserRouter: Router = router;
+export const UserRouter: Router = userRouter;
+export const AdminUserRouter: Router = adminUserRouter;

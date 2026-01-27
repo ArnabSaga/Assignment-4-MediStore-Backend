@@ -1,13 +1,17 @@
 import { prisma } from "../../lib/prisma";
-import { Role } from "../../../generated/prisma";
+import { Role } from "../../../generated/prisma/client";
 
 interface UpdateUserProfilePayload {
-  name?: string | undefined;
-  phone?: string | undefined;
-  image?: string | undefined;
+  name?: string;
+  phone?: string;
+  image?: string;
 }
 
 const getUserById = async (id: string) => {
+  if (!id) {
+    throw Object.assign(new Error("User id is required"), { statusCode: 400 });
+  }
+
   const result = await prisma.user.findUniqueOrThrow({
     where: { id },
     select: {
@@ -22,6 +26,7 @@ const getUserById = async (id: string) => {
       createdAt: true,
     },
   });
+
   return result;
 };
 
@@ -29,13 +34,19 @@ const updateUserProfile = async (
   id: string,
   payload: UpdateUserProfilePayload
 ) => {
-  // Clean up undefined values
-  const cleanData: any = {};
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined) {
-      cleanData[key] = value;
+  if (!id) {
+    throw Object.assign(new Error("User id is required"), { statusCode: 400 });
+  }
+
+  const cleanData: Partial<UpdateUserProfilePayload> = {};
+  (Object.keys(payload) as (keyof UpdateUserProfilePayload)[]).forEach(
+    (key) => {
+      const value = payload[key];
+      if (value !== undefined) {
+        cleanData[key] = value;
+      }
     }
-  });
+  );
 
   if (Object.keys(cleanData).length === 0) {
     throw Object.assign(new Error("No fields to update"), { statusCode: 400 });
@@ -54,19 +65,20 @@ const updateUserProfile = async (
       createdAt: true,
     },
   });
+
   return result;
 };
 
-const getAllUsers = async (
-  role?: string | undefined,
-  isBanned?: boolean | undefined
-) => {
-  const where: any = {};
+const getAllUsers = async (role?: string, isBanned?: boolean) => {
+  const where: Record<string, any> = {};
 
   if (role) {
-    const validRoles = ["CUSTOMER", "SELLER", "ADMIN"];
-    if (!validRoles.includes(role)) {
-      throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
+    const validRoles = ["CUSTOMER", "SELLER", "ADMIN"] as const;
+    if (!validRoles.includes(role as any)) {
+      throw Object.assign(
+        new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`),
+        { statusCode: 400 }
+      );
     }
     where.role = role;
   }
@@ -86,14 +98,17 @@ const getAllUsers = async (
       isBanned: true,
       createdAt: true,
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    orderBy: { createdAt: "desc" },
   });
+
   return result;
 };
 
 const updateUserStatus = async (id: string, isBanned: boolean) => {
+  if (!id) {
+    throw Object.assign(new Error("User id is required"), { statusCode: 400 });
+  }
+
   const result = await prisma.user.update({
     where: { id },
     data: { isBanned },
@@ -105,13 +120,21 @@ const updateUserStatus = async (id: string, isBanned: boolean) => {
       isBanned: true,
     },
   });
+
   return result;
 };
 
 const changeUserRole = async (id: string, role: string) => {
-  const validRoles = ["CUSTOMER", "SELLER", "ADMIN"];
-  if (!validRoles.includes(role)) {
-    throw new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`);
+  if (!id) {
+    throw Object.assign(new Error("User id is required"), { statusCode: 400 });
+  }
+
+  const validRoles = ["CUSTOMER", "SELLER", "ADMIN"] as const;
+  if (!validRoles.includes(role as any)) {
+    throw Object.assign(
+      new Error(`Invalid role. Must be one of: ${validRoles.join(", ")}`),
+      { statusCode: 400 }
+    );
   }
 
   const result = await prisma.user.update({
@@ -124,19 +147,22 @@ const changeUserRole = async (id: string, role: string) => {
       role: true,
     },
   });
+
   return result;
 };
 
 const deleteUser = async (id: string, currentUserId?: string) => {
+  if (!id) {
+    throw Object.assign(new Error("User id is required"), { statusCode: 400 });
+  }
+
   if (currentUserId && id === currentUserId) {
     throw Object.assign(new Error("Cannot delete your own account"), {
       statusCode: 403,
     });
   }
 
-  await prisma.user.delete({
-    where: { id },
-  });
+  await prisma.user.delete({ where: { id } });
 };
 
 export const UserService = {
