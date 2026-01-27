@@ -19,7 +19,6 @@ const createCategory = async (payload: Omit<Category, "id" | "createdAt">) => {
   const result = await prisma.category.create({
     data: payload,
   });
-    console.log(result);
 
   return result;
 };

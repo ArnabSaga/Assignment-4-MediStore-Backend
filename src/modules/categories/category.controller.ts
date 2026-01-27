@@ -8,7 +8,6 @@ const createCategory = async (
 ) => {
   try {
     const result = await CategoryService.createCategory(req.body);
-    console.log(result);
 
     res.status(201).json({
       success: true,
