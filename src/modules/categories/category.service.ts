@@ -1,4 +1,7 @@
 import { Category } from "../../../generated/prisma";
+
+import { generateSlug } from '../../helpers/generateSlug';
+
 import { prisma } from "../../lib/prisma";
 
 const createCategory = async (payload: Omit<Category, "id" | "createdAt">) => {
@@ -55,14 +58,19 @@ const updateCategory = async (
   id: string,
   payload: Partial<Omit<Category, "id" | "createdAt">>
 ) => {
-  // If slug is being updated, check for duplicates
+  if (payload.name && !payload.slug) {
+    payload.slug = generateSlug(payload.name);
+  }
+
   if (payload.slug) {
     const existing = await prisma.category.findUnique({
       where: { slug: payload.slug },
     });
 
     if (existing && existing.id !== id) {
-      throw new Error("Category with this slug already exists");
+      const error = new Error("Category with this slug already exists") as any;
+      error.statusCode = 400;
+      throw error;
     }
   }
 

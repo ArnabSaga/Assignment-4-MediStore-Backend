@@ -1,5 +1,8 @@
 import { NextFunction, Request, Response } from "express";
+
 import { CategoryService } from "./category.service";
+
+import { generateSlug } from "../../helpers/generateSlug";
 
 const createCategory = async (
   req: Request,
@@ -7,7 +10,15 @@ const createCategory = async (
   next: NextFunction
 ) => {
   try {
-    const result = await CategoryService.createCategory(req.body);
+    const { name, slug, description } = req.body;
+
+    const categoryData = {
+      name,
+      slug: slug || generateSlug(name),
+      description,
+    };
+
+    const result = await CategoryService.createCategory(categoryData);
 
     res.status(201).json({
       success: true,
