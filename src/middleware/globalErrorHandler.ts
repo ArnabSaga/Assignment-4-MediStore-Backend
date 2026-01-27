@@ -7,11 +7,14 @@ function globalErrorHandler(
   res: Response,
   next: NextFunction
 ) {
-  let statusCode = 500;
-  let message = "Internal Server Error";
+  let statusCode: number =
+    typeof err?.statusCode === "number" ? err.statusCode : 500;
+  let message: string =
+    typeof err?.message === "string" && err.message.trim()
+      ? err.message
+      : "Internal Server Error";
 
-  // ---------------- PRISMA ----------------
-
+  //* PRISMA
   if (err instanceof Prisma.PrismaClientValidationError) {
     statusCode = 400;
     message = "Invalid data provided.";
@@ -46,7 +49,7 @@ function globalErrorHandler(
     message = "Unexpected database error.";
   }
 
-  // ---------------- AUTH / CUSTOM ----------------
+  //* AUTH / CUSTOM
   else if (err?.name === "UnauthorizedError") {
     statusCode = 401;
     message = "Unauthorized access.";
@@ -55,13 +58,12 @@ function globalErrorHandler(
     message = "Forbidden access.";
   }
 
-  // ---------------- DEFAULT ----------------
-
   res.status(statusCode).json({
     success: false,
     message,
     ...(process.env.NODE_ENV === "development" && {
-      stack: err.stack,
+      stack: err?.stack,
+      prismaCode: err?.code,
     }),
   });
 }
