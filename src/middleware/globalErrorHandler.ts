@@ -10,7 +10,7 @@ function globalErrorHandler(
   let statusCode: number =
     typeof err?.statusCode === "number" ? err.statusCode : 500;
   let message: string =
-    typeof err?.message === "string" && err.message.trim()
+    typeof err?.message === "string" && err.message.trim().length > 0
       ? err.message
       : "Internal Server Error";
 
