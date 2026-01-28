@@ -99,65 +99,65 @@ The API follows a **layered, modular architecture**:
 
 ### Authentication Endpoints
 
-| Method | Endpoint             | Access | Description                    |
-| ------ | -------------------- | ------ | ------------------------------ |
-| `POST` | `/auth/register`     | Public | User registration with email   |
-| `POST` | `/auth/login`        | Public | User login (returns JWT token) |
-| `GET`  | `/auth/me`           | Auth   | Get current authenticated user |
-| `POST` | `/auth/logout`       | Auth   | Logout & invalidate session    |
-| `POST` | `/auth/verify-email` | Public | Verify email with token        |
+| Method | Endpoint             | Customer | Seller | Admin | Description                    |
+| ------ | -------------------- | :------: | :----: | :---: | ------------------------------ |
+| `POST` | `/auth/register`     |    ✅    |   ✅   |  ✅   | User registration with email   |
+| `POST` | `/auth/login`        |    ✅    |   ✅   |  ✅   | User login (returns JWT token) |
+| `GET`  | `/auth/me`           |    ✅    |   ✅   |  ✅   | Get current authenticated user |
+| `POST` | `/auth/logout`       |    ✅    |   ✅   |  ✅   | Logout & invalidate session    |
+| `POST` | `/auth/verify-email` |    ✅    |   ✅   |  ✅   | Verify email with token        |
 
 ### Categories Endpoints
 
-| Method   | Endpoint                    | Access  | Description                     |
-| -------- | --------------------------- | ------- | ------------------------------- |
-| `GET`    | `/categories`               | Public  | List all categories (paginated) |
-| `GET`    | `/categories/by-slug/:slug` | Public  | Get category by slug            |
-| `GET`    | `/categories/:id`           | Public  | Get category by ID              |
-| `POST`   | `/categories`               | Admin\* | Create new category             |
-| `PUT`    | `/categories/:id`           | Admin\* | Update category                 |
-| `DELETE` | `/categories/:id`           | Admin\* | Delete category                 |
+| Method   | Endpoint                    | Customer | Seller | Admin | Description                     |
+| -------- | --------------------------- | :------: | :----: | :---: | ------------------------------- |
+| `GET`    | `/categories`               |    ✅    |   ✅   |  ✅   | List all categories (paginated) |
+| `GET`    | `/categories/by-slug/:slug` |    ✅    |   ✅   |  ✅   | Get category by slug            |
+| `GET`    | `/categories/:id`           |    ✅    |   ✅   |  ✅   | Get category by ID              |
+| `POST`   | `/categories`               |    ❌    |   ❌   | ✅\*  | Create new category             |
+| `PUT`    | `/categories/:id`           |    ❌    |   ❌   | ✅\*  | Update category                 |
+| `DELETE` | `/categories/:id`           |    ❌    |   ❌   | ✅\*  | Delete category                 |
 
-\*_Admin_ = Requires `Authorization: Bearer <token>` + verified email\*
+✅ = Accessible | ❌ = Not Accessible | ✅\* = Requires verified email
 
 ### Medicines Endpoints
 
-| Method   | Endpoint         | Access  | Description                                |
-| -------- | ---------------- | ------- | ------------------------------------------ |
-| `GET`    | `/medicines`     | Public  | List all medicines (paginated, filterable) |
-| `GET`    | `/medicines/:id` | Public  | Get medicine details                       |
-| `POST`   | `/medicines`     | Admin\* | Create new medicine                        |
-| `PUT`    | `/medicines/:id` | Admin\* | Update medicine                            |
-| `DELETE` | `/medicines/:id` | Admin\* | Delete medicine                            |
+| Method   | Endpoint         | Customer | Seller | Admin | Description                                |
+| -------- | ---------------- | :------: | :----: | :---: | ------------------------------------------ |
+| `GET`    | `/medicines`     |    ✅    |   ✅   |  ✅   | List all medicines (paginated, filterable) |
+| `GET`    | `/medicines/:id` |    ✅    |   ✅   |  ✅   | Get medicine details                       |
+| `POST`   | `/medicines`     |    ❌    |   ❌   | ✅\*  | Create new medicine                        |
+| `PUT`    | `/medicines/:id` |    ❌    |   ❌   | ✅\*  | Update medicine                            |
+| `DELETE` | `/medicines/:id` |    ❌    |   ❌   | ✅\*  | Delete medicine                            |
 
 ### Orders Endpoints
 
-| Method   | Endpoint      | Access  | Description                                                |
-| -------- | ------------- | ------- | ---------------------------------------------------------- |
-| `GET`    | `/orders`     | Auth    | List user's orders                                         |
-| `GET`    | `/orders/:id` | Auth    | Get order details                                          |
-| `POST`   | `/orders`     | Auth    | Create new order                                           |
-| `PUT`    | `/orders/:id` | Admin\* | Update order status (PENDING → PAID → SHIPPED → CANCELLED) |
-| `DELETE` | `/orders/:id` | Admin\* | Delete order                                               |
+| Method   | Endpoint      | Customer | Seller | Admin | Description                                                |
+| -------- | ------------- | :------: | :----: | :---: | ---------------------------------------------------------- |
+| `GET`    | `/orders`     |    ✅    |   ✅   |  ✅   | List user's orders                                         |
+| `GET`    | `/orders/:id` |    ✅    |   ✅   |  ✅   | Get order details                                          |
+| `POST`   | `/orders`     |    ✅    |   ❌   |  ✅   | Create new order                                           |
+| `PUT`    | `/orders/:id` |    ❌    |   ❌   | ✅\*  | Update order status (PENDING → PAID → SHIPPED → CANCELLED) |
+| `DELETE` | `/orders/:id` |    ❌    |   ❌   | ✅\*  | Delete order                                               |
 
 ### Reviews Endpoints
 
-| Method   | Endpoint       | Access | Description                        |
-| -------- | -------------- | ------ | ---------------------------------- |
-| `GET`    | `/reviews`     | Public | List medicine reviews              |
-| `GET`    | `/reviews/:id` | Public | Get review details                 |
-| `POST`   | `/reviews`     | Auth   | Create review for ordered medicine |
-| `PUT`    | `/reviews/:id` | Auth   | Update own review                  |
-| `DELETE` | `/reviews/:id` | Auth   | Delete own review                  |
+| Method   | Endpoint       | Customer | Seller | Admin | Description                        |
+| -------- | -------------- | :------: | :----: | :---: | ---------------------------------- |
+| `GET`    | `/reviews`     |    ✅    |   ✅   |  ✅   | List medicine reviews              |
+| `GET`    | `/reviews/:id` |    ✅    |   ✅   |  ✅   | Get review details                 |
+| `POST`   | `/reviews`     |    ✅    |   ✅   |  ✅   | Create review for ordered medicine |
+| `PUT`    | `/reviews/:id` |    ✅    |   ✅   |  ✅   | Update own review                  |
+| `DELETE` | `/reviews/:id` |    ✅    |   ✅   |  ✅   | Delete own review                  |
 
 ### Users Endpoints
 
-| Method   | Endpoint     | Access  | Description        |
-| -------- | ------------ | ------- | ------------------ |
-| `GET`    | `/users`     | Admin\* | List all users     |
-| `GET`    | `/users/:id` | Admin\* | Get user details   |
-| `PUT`    | `/users/:id` | Auth    | Update own profile |
-| `DELETE` | `/users/:id` | Admin\* | Delete user        |
+| Method   | Endpoint     | Customer | Seller | Admin | Description        |
+| -------- | ------------ | :------: | :----: | :---: | ------------------ |
+| `GET`    | `/users`     |    ❌    |   ❌   | ✅\*  | List all users     |
+| `GET`    | `/users/:id` |    ❌    |   ❌   | ✅\*  | Get user details   |
+| `PUT`    | `/users/:id` |    ✅    |   ✅   | ✅\*  | Update own profile |
+| `DELETE` | `/users/:id` |    ❌    |   ❌   | ✅\*  | Delete user        |
 
 ---
 
