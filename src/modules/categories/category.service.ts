@@ -1,5 +1,8 @@
 import { prisma } from "../../lib/prisma";
 import { generateSlug } from "../../helpers/generateSlug";
+import type { PaginationOptions } from "../../helpers/paginationSortingHelper";
+
+const ALLOWED_CATEGORY_SORT_FIELDS = new Set(["createdAt", "name", "slug"]);
 
 type CreateCategoryPayload = {
   name: string;
@@ -50,20 +53,35 @@ const createCategory = async (payload: CreateCategoryPayload) => {
   });
 };
 
-const getAllCategories = async () => {
-  return prisma.category.findMany({
-    include: {
-      medicines: {
-        where: { isActive: true },
-        select: {
-          id: true,
-          name: true,
-          price: true,
+const getAllCategories = async (pagination: PaginationOptions) => {
+  const sortBy = ALLOWED_CATEGORY_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
+  const [data, total] = await prisma.$transaction([
+    prisma.category.findMany({
+      skip: pagination.skip,
+      take: pagination.limit,
+      include: {
+        medicines: {
+          where: { isActive: true },
+          select: { id: true, name: true, price: true },
         },
       },
+      orderBy: { [sortBy]: pagination.sortOrder },
+    }),
+    prisma.category.count(),
+  ]);
+
+  return {
+    meta: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.ceil(total / pagination.limit),
     },
-    orderBy: { createdAt: "desc" },
-  });
+    data,
+  };
 };
 
 const getCategoryById = async (id: string) => {

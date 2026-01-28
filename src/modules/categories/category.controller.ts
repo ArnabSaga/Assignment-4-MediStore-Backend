@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { CategoryService } from "./category.service";
 import { generateSlug } from "../../helpers/generateSlug";
+import paginationSortingHelper from "../../helpers/paginationSortingHelper";
 
 const createCategory = async (
   req: Request,
@@ -48,12 +49,15 @@ const getAllCategories = async (
   next: NextFunction
 ) => {
   try {
-    const result = await CategoryService.getAllCategories();
+    const pagination = paginationSortingHelper(req.query);
+
+    const result = await CategoryService.getAllCategories(pagination);
 
     res.status(200).json({
       success: true,
       message: "Categories fetched successfully",
-      data: result,
+      meta: result.meta,
+      data: result.data,
     });
   } catch (error) {
     next(error);
