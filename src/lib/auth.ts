@@ -24,7 +24,7 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: {
-        type: "string", 
+        type: "string",
         defaultValue: "CUSTOMER",
       },
       isBanned: {
@@ -37,7 +37,7 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: [process.env.APP_URL!],
+  trustedOrigins: [process.env.APP_URL!, process.env.API_URL!].filter(Boolean),
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
