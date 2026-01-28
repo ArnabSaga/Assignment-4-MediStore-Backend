@@ -1,7 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-
 import { MedicineService } from "./medicine.service";
-
 import { generateSlug } from "../../helpers/generateSlug";
 
 const createMedicine = async (
@@ -11,40 +9,83 @@ const createMedicine = async (
 ) => {
   try {
     const sellerId = req.user?.id;
-    const { name, price, stock, manufacturer, categoryId, slug, ...rest } =
-      req.body;
+    if (!sellerId)
+      throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
 
-    if (
-      !name ||
-      !price ||
-      stock === undefined ||
-      !manufacturer ||
-      !categoryId
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Missing required fields: name, price, stock, manufacturer, categoryId",
-      });
-    }
-
-    if (price <= 0 || stock < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Price must be positive and stock must be non-negative",
-      });
-    }
-
-    const result = await MedicineService.createMedicine({
+    const {
       name,
       price,
       stock,
       manufacturer,
       categoryId,
-      slug: slug || generateSlug(name),
-      ...rest,
-      sellerId: sellerId!,
-    });
+      slug,
+      description,
+      imageUrl,
+      isActive,
+    } = req.body;
+
+    if (!name || typeof name !== "string" || name.trim().length < 2) {
+      throw Object.assign(new Error("name is required (min 2 chars)"), {
+        statusCode: 400,
+      });
+    }
+
+    if (typeof price !== "number" || Number.isNaN(price) || price <= 0) {
+      throw Object.assign(new Error("price must be a positive number"), {
+        statusCode: 400,
+      });
+    }
+
+    if (!Number.isInteger(stock) || stock < 0) {
+      throw Object.assign(new Error("stock must be a non-negative integer"), {
+        statusCode: 400,
+      });
+    }
+
+    if (
+      !manufacturer ||
+      typeof manufacturer !== "string" ||
+      manufacturer.trim().length < 2
+    ) {
+      throw Object.assign(new Error("manufacturer is required (min 2 chars)"), {
+        statusCode: 400,
+      });
+    }
+
+    if (!categoryId || typeof categoryId !== "string") {
+      throw Object.assign(new Error("categoryId is required"), {
+        statusCode: 400,
+      });
+    }
+
+    const finalSlug =
+      typeof slug === "string" && slug.trim().length > 0
+        ? generateSlug(slug)
+        : generateSlug(name);
+
+    const payload: any = {
+      name: name.trim(),
+      slug: finalSlug,
+      price,
+      stock,
+      manufacturer: manufacturer.trim(),
+      categoryId,
+      sellerId,
+    };
+
+    if (typeof description === "string" && description.trim().length > 0) {
+      payload.description = description.trim();
+    }
+
+    if (typeof imageUrl === "string" && imageUrl.trim().length > 0) {
+      payload.imageUrl = imageUrl.trim();
+    }
+
+    if (typeof isActive === "boolean") {
+      payload.isActive = isActive;
+    }
+
+    const result = await MedicineService.createMedicine(payload);
 
     res.status(201).json({
       success: true,
@@ -66,12 +107,12 @@ const getAllMedicines = async (
 
     const filters: any = {};
 
-    if (categoryId) filters.categoryId = String(categoryId);
-    if (search) filters.search = String(search);
-    if (manufacturer) filters.manufacturer = String(manufacturer);
+    if (typeof categoryId === "string") filters.categoryId = categoryId;
+    if (typeof search === "string") filters.search = search;
+    if (typeof manufacturer === "string") filters.manufacturer = manufacturer;
 
-    if (minPrice !== undefined) filters.minPrice = parseFloat(String(minPrice));
-    if (maxPrice !== undefined) filters.maxPrice = parseFloat(String(maxPrice));
+    if (typeof minPrice === "string") filters.minPrice = Number(minPrice);
+    if (typeof maxPrice === "string") filters.maxPrice = Number(maxPrice);
 
     const result = await MedicineService.getAllMedicines(filters);
 
@@ -92,12 +133,41 @@ const getMedicineById = async (
 ) => {
   try {
     const id = String(req.params.id);
-
     const result = await MedicineService.getMedicineById(id);
 
     res.status(200).json({
       success: true,
       message: "Medicine fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getSellerMedicines = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const sellerId = req.user?.id;
+    if (!sellerId)
+      throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
+
+    const includeInactive =
+      typeof req.query.includeInactive === "string"
+        ? req.query.includeInactive === "true"
+        : false;
+
+    const result = await MedicineService.getSellerMedicines(
+      sellerId,
+      includeInactive
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Seller medicines fetched successfully",
       data: result,
     });
   } catch (error) {
@@ -112,18 +182,15 @@ const updateMedicine = async (
 ) => {
   try {
     const id = String(req.params.id);
-    const { id: userId, role } = req.user!;
-    const { name, slug, ...rest } = req.body;
+    const actor = req.user;
+    if (!actor)
+      throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
 
-    const result = await MedicineService.updateMedicine(
+    const payload = req.body ?? {};
+    const result = await MedicineService.updateMedicineForSeller(
       id,
-      {
-        name,
-        slug: slug || (name ? generateSlug(name) : undefined),
-        ...rest,
-      },
-      userId!,
-      role!
+      payload,
+      actor.id
     );
 
     res.status(200).json({
@@ -143,9 +210,11 @@ const deleteMedicine = async (
 ) => {
   try {
     const id = String(req.params.id);
-    const { id: userId, role } = req.user!;
+    const actor = req.user;
+    if (!actor)
+      throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
 
-    await MedicineService.deleteMedicine(id, userId!, role!);
+    await MedicineService.deleteMedicineForSeller(id, actor.id);
 
     res.status(200).json({
       success: true,
@@ -156,20 +225,39 @@ const deleteMedicine = async (
   }
 };
 
-const getSellerMedicines = async (
+//* Admin endpoints
+const adminUpdateMedicine = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const sellerId = req.user?.id;
-
-    const result = await MedicineService.getSellerMedicines(sellerId!);
+    const id = String(req.params.id);
+    const payload = req.body ?? {};
+    const result = await MedicineService.updateMedicineAsAdmin(id, payload);
 
     res.status(200).json({
       success: true,
-      message: "Seller medicines fetched successfully",
+      message: "Medicine updated successfully",
       data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const adminDeleteMedicine = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = String(req.params.id);
+    await MedicineService.deleteMedicineAsAdmin(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Medicine deleted successfully",
     });
   } catch (error) {
     next(error);
@@ -180,7 +268,9 @@ export const MedicineController = {
   createMedicine,
   getAllMedicines,
   getMedicineById,
+  getSellerMedicines,
   updateMedicine,
   deleteMedicine,
-  getSellerMedicines,
+  adminUpdateMedicine,
+  adminDeleteMedicine,
 };

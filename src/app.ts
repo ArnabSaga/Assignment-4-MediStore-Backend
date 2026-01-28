@@ -7,7 +7,11 @@ import { auth } from "./lib/auth";
 //* Route imports
 import { UserRouter, AdminUserRouter } from "./modules/users/user.route";
 import { CategoryRouter } from "./modules/categories/category.route";
-import { MedicineRouter } from "./modules/medicines/medicine.route";
+import {
+  AdminMedicineRouter,
+  MedicineRouter,
+  SellerMedicineRouter,
+} from "./modules/medicines/medicine.route";
 import {
   OrderRouter,
   SellerOrderRouter,
@@ -35,8 +39,12 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 //* API Routes
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/categories", CategoryRouter);
-app.use("/api/v1/medicines", MedicineRouter);
 app.use("/api/v1/reviews", ReviewRouter);
+
+//* Medicine
+app.use("/api/v1/medicines", MedicineRouter);
+app.use("/api/v1/seller/medicines", SellerMedicineRouter);
+app.use("/api/v1/admin/medicines", AdminMedicineRouter);
 
 //* Orders
 app.use("/api/v1/orders", OrderRouter); //* Customer

@@ -1,71 +1,69 @@
-// 1. Correct import using your path mapping or alias
 import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
+import { generateSlug } from "../../helpers/generateSlug";
 
-// Using Prisma.Decimal ensures compatibility with your generated client
-interface CreateMedicinePayload {
+type CreateMedicinePayload = {
   name: string;
   slug: string;
-  description?: string | null;
-  price: number | Prisma.Decimal;
+  description?: string;
+  price: number;
   stock: number;
   manufacturer: string;
   categoryId: string;
-  imageUrl?: string | null;
+  imageUrl?: string;
+  isActive?: boolean;
   sellerId: string;
-}
+};
 
-interface UpdateMedicinePayload {
+type UpdateMedicinePayload = {
   name?: string;
   slug?: string;
   description?: string | null;
-  price?: number | Prisma.Decimal;
+  price?: number;
   stock?: number;
   manufacturer?: string;
   categoryId?: string;
   imageUrl?: string | null;
   isActive?: boolean;
-}
+};
 
-interface GetMedicinesFilter {
+type GetMedicinesFilter = {
   categoryId?: string;
   search?: string;
   minPrice?: number;
   maxPrice?: number;
   manufacturer?: string;
-}
+};
 
 const createMedicine = async (payload: CreateMedicinePayload) => {
-  const cleanData = {
-    ...payload,
-    description: payload.description ?? null,
-    imageUrl: payload.imageUrl ?? null,
-    // Ensure price is handled as a Decimal if it's passed as a number
-    price: new Prisma.Decimal(payload.price.toString()),
-  };
+  const slug = generateSlug(payload.slug);
 
-  const result = await prisma.medicine.create({
-    data: cleanData,
+  return prisma.medicine.create({
+    data: {
+      name: payload.name,
+      slug,
+      price: new Prisma.Decimal(payload.price),
+      stock: payload.stock,
+      manufacturer: payload.manufacturer,
+      categoryId: payload.categoryId,
+      sellerId: payload.sellerId,
+      ...(payload.description !== undefined
+        ? { description: payload.description }
+        : {}),
+      ...(payload.imageUrl !== undefined ? { imageUrl: payload.imageUrl } : {}),
+      ...(payload.isActive !== undefined ? { isActive: payload.isActive } : {}),
+    },
     include: {
       category: true,
-      seller: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
+      seller: { select: { id: true, name: true, email: true } },
     },
   });
-  return result;
 };
 
 const getAllMedicines = async (filters: GetMedicinesFilter) => {
-  const where: any = { isActive: true };
+  const where: Prisma.MedicineWhereInput = { isActive: true };
 
-  if (filters.categoryId) {
-    where.categoryId = filters.categoryId;
-  }
+  if (filters.categoryId) where.categoryId = filters.categoryId;
 
   if (filters.search) {
     where.OR = [
@@ -77,8 +75,10 @@ const getAllMedicines = async (filters: GetMedicinesFilter) => {
 
   if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
     where.price = {};
-    if (filters.minPrice !== undefined) where.price.gte = filters.minPrice;
-    if (filters.maxPrice !== undefined) where.price.lte = filters.maxPrice;
+    if (filters.minPrice !== undefined)
+      where.price.gte = new Prisma.Decimal(filters.minPrice);
+    if (filters.maxPrice !== undefined)
+      where.price.lte = new Prisma.Decimal(filters.maxPrice);
   }
 
   if (filters.manufacturer) {
@@ -88,7 +88,7 @@ const getAllMedicines = async (filters: GetMedicinesFilter) => {
     };
   }
 
-  return await prisma.medicine.findMany({
+  return prisma.medicine.findMany({
     where,
     include: {
       category: true,
@@ -100,7 +100,7 @@ const getAllMedicines = async (filters: GetMedicinesFilter) => {
 };
 
 const getMedicineById = async (id: string) => {
-  return await prisma.medicine.findUniqueOrThrow({
+  return prisma.medicine.findUniqueOrThrow({
     where: { id },
     include: {
       category: true,
@@ -114,35 +114,118 @@ const getMedicineById = async (id: string) => {
   });
 };
 
-const updateMedicine = async (
+const getSellerMedicines = async (
+  sellerId: string,
+  includeInactive: boolean
+) => {
+  return prisma.medicine.findMany({
+    where: {
+      sellerId,
+      ...(includeInactive ? {} : { isActive: true }),
+    },
+    include: {
+      category: true,
+      reviews: { select: { rating: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+const updateMedicineForSeller = async (
   id: string,
   payload: UpdateMedicinePayload,
-  userId: string,
-  role: string
+  sellerId: string
 ) => {
-  const medicine = await prisma.medicine.findUniqueOrThrow({
-    where: { id },
-  });
+  const medicine = await prisma.medicine.findUniqueOrThrow({ where: { id } });
 
-  if (role !== "ADMIN" && medicine.sellerId !== userId) {
-    const error = new Error("Unauthorized to update this medicine") as any;
-    error.name = "ForbiddenError";
-    error.statusCode = 403;
-    throw error;
+  if (medicine.sellerId !== sellerId) {
+    throw Object.assign(
+      new Error("Forbidden: unauthorized to update this medicine"),
+      {
+        statusCode: 403,
+      }
+    );
   }
 
-  const cleanData: any = {};
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined) {
-      if (key === "price") {
-        cleanData[key] = new Prisma.Decimal(value!.toString());
-      } else {
-        cleanData[key] = value ?? null;
-      }
-    }
-  });
+  const cleanData: Prisma.MedicineUpdateInput = {};
 
-  return await prisma.medicine.update({
+  if (payload.name !== undefined) {
+    if (typeof payload.name !== "string" || payload.name.trim().length < 2) {
+      throw Object.assign(new Error("name must be at least 2 characters"), {
+        statusCode: 400,
+      });
+    }
+    cleanData.name = payload.name.trim();
+  }
+
+  if (payload.slug !== undefined) {
+    if (typeof payload.slug !== "string" || payload.slug.trim().length < 2) {
+      throw Object.assign(new Error("slug must be at least 2 characters"), {
+        statusCode: 400,
+      });
+    }
+    cleanData.slug = generateSlug(payload.slug);
+  } else if (payload.name !== undefined) {
+    cleanData.slug = generateSlug(payload.name);
+  }
+
+  if (payload.description !== undefined)
+    cleanData.description = payload.description;
+  if (payload.imageUrl !== undefined) cleanData.imageUrl = payload.imageUrl;
+  if (payload.isActive !== undefined) cleanData.isActive = payload.isActive;
+
+  if (payload.price !== undefined) {
+    if (
+      typeof payload.price !== "number" ||
+      Number.isNaN(payload.price) ||
+      payload.price <= 0
+    ) {
+      throw Object.assign(new Error("price must be a positive number"), {
+        statusCode: 400,
+      });
+    }
+    cleanData.price = new Prisma.Decimal(payload.price);
+  }
+
+  if (payload.stock !== undefined) {
+    if (!Number.isInteger(payload.stock) || payload.stock < 0) {
+      throw Object.assign(new Error("stock must be a non-negative integer"), {
+        statusCode: 400,
+      });
+    }
+    cleanData.stock = payload.stock;
+  }
+
+  if (payload.manufacturer !== undefined) {
+    if (
+      typeof payload.manufacturer !== "string" ||
+      payload.manufacturer.trim().length < 2
+    ) {
+      throw Object.assign(
+        new Error("manufacturer must be at least 2 characters"),
+        { statusCode: 400 }
+      );
+    }
+    cleanData.manufacturer = payload.manufacturer.trim();
+  }
+
+  if (payload.categoryId !== undefined) {
+    if (
+      typeof payload.categoryId !== "string" ||
+      payload.categoryId.trim().length === 0
+    ) {
+      throw Object.assign(new Error("categoryId must be a valid string"), {
+        statusCode: 400,
+      });
+    }
+    cleanData.category = { connect: { id: payload.categoryId } };
+  }
+
+  if (Object.keys(cleanData).length === 0) {
+    throw Object.assign(new Error("No fields to update"), { statusCode: 400 });
+  }
+
+  return prisma.medicine.update({
     where: { id },
     data: cleanData,
     include: {
@@ -152,37 +235,43 @@ const updateMedicine = async (
   });
 };
 
-const deleteMedicine = async (id: string, userId: string, role: string) => {
-  const medicine = await prisma.medicine.findUniqueOrThrow({
-    where: { id },
-  });
+const deleteMedicineForSeller = async (id: string, sellerId: string) => {
+  const medicine = await prisma.medicine.findUniqueOrThrow({ where: { id } });
 
-  if (role !== "ADMIN" && medicine.sellerId !== userId) {
-    const error = new Error("Unauthorized to delete this medicine") as any;
-    error.name = "ForbiddenError";
-    error.statusCode = 403;
-    throw error;
+  if (medicine.sellerId !== sellerId) {
+    throw Object.assign(
+      new Error("Forbidden: unauthorized to delete this medicine"),
+      {
+        statusCode: 403,
+      }
+    );
   }
 
   await prisma.medicine.delete({ where: { id } });
 };
 
-const getSellerMedicines = async (sellerId: string) => {
-  return await prisma.medicine.findMany({
-    where: { sellerId },
-    include: {
-      category: true,
-      reviews: { select: { rating: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+const updateMedicineAsAdmin = async (
+  id: string,
+  payload: UpdateMedicinePayload
+) => {
+  return updateMedicineForSeller(
+    id,
+    payload,
+    (await prisma.medicine.findUniqueOrThrow({ where: { id } })).sellerId
+  );
+};
+
+const deleteMedicineAsAdmin = async (id: string) => {
+  await prisma.medicine.delete({ where: { id } });
 };
 
 export const MedicineService = {
   createMedicine,
   getAllMedicines,
   getMedicineById,
-  updateMedicine,
-  deleteMedicine,
   getSellerMedicines,
+  updateMedicineForSeller,
+  deleteMedicineForSeller,
+  updateMedicineAsAdmin,
+  deleteMedicineAsAdmin,
 };
