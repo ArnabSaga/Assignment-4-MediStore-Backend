@@ -1,6 +1,13 @@
 import { prisma } from "../../lib/prisma";
 import { Prisma, OrderStatus } from "../../../generated/prisma/client";
 import { UserRole } from "../../middleware/auth.middleware";
+import type { PaginationOptions } from "../../helpers/paginationSortingHelper";
+
+const ALLOWED_ORDER_SORT_FIELDS = new Set([
+  "createdAt",
+  "totalAmount",
+  "status",
+]);
 
 interface CreateOrderPayload {
   customerId: string;
@@ -141,15 +148,21 @@ const createOrder = async (payload: CreateOrderPayload) => {
   return result;
 };
 
-const getUserOrders = async (userId: string) => {
+const getUserOrders = async (userId: string, pagination: PaginationOptions) => {
   if (!userId) {
     throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
   }
 
+  const sortBy = ALLOWED_ORDER_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
   return prisma.order.findMany({
     where: { customerId: userId },
+    skip: pagination.skip,
+    take: pagination.limit,
     include: { items: { include: { medicine: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: pagination.sortOrder },
   });
 };
 
@@ -168,7 +181,10 @@ const getOrderByIdForCustomer = async (id: string, userId: string) => {
   return result;
 };
 
-const getAllOrders = async (status?: string) => {
+const getAllOrders = async (
+  status: string | undefined,
+  pagination: PaginationOptions
+) => {
   const where: Prisma.OrderWhereInput = {};
 
   if (status) {
@@ -183,23 +199,43 @@ const getAllOrders = async (status?: string) => {
     where.status = status as OrderStatus;
   }
 
+  const sortBy = ALLOWED_ORDER_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
   return prisma.order.findMany({
     where,
+    skip: pagination.skip,
+    take: pagination.limit,
     include: {
       customer: { select: { id: true, name: true, email: true } },
       items: { include: { medicine: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: pagination.sortOrder },
   });
 };
 
-const getSellerOrders = async (sellerId: string) => {
+const getSellerOrders = async (
+  sellerId: string,
+  pagination: PaginationOptions
+) => {
   if (!sellerId) {
     throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
   }
 
+  const ALLOWED_ORDER_ITEM_SORT_FIELDS = new Set([
+    "createdAt",
+    "price",
+    "quantity",
+  ]);
+  const sortBy = ALLOWED_ORDER_ITEM_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
   return prisma.orderItem.findMany({
     where: { sellerId },
+    skip: pagination.skip,
+    take: pagination.limit,
     include: {
       order: {
         include: {
@@ -210,7 +246,7 @@ const getSellerOrders = async (sellerId: string) => {
       },
       medicine: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: pagination.sortOrder },
   });
 };
 

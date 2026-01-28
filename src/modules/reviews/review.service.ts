@@ -1,5 +1,8 @@
 import { prisma } from "../../lib/prisma";
 import { OrderStatus } from "../../../generated/prisma/client";
+import type { PaginationOptions } from "../../helpers/paginationSortingHelper";
+
+const ALLOWED_REVIEW_SORT_FIELDS = new Set(["createdAt", "rating"]);
 
 interface CreateReviewPayload {
   customerId: string;
@@ -54,35 +57,41 @@ const createReview = async (payload: CreateReviewPayload) => {
   return result;
 };
 
-const getMedicineReviews = async (medicineId: string) => {
+const getMedicineReviews = async (
+  medicineId: string,
+  pagination: PaginationOptions
+) => {
+  const sortBy = ALLOWED_REVIEW_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
   return prisma.review.findMany({
     where: { medicineId },
+    skip: pagination.skip,
+    take: pagination.limit,
     include: {
-      customer: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
-      },
+      customer: { select: { id: true, name: true, image: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: pagination.sortOrder },
   });
 };
 
-const getUserReviews = async (customerId: string) => {
+const getUserReviews = async (
+  customerId: string,
+  pagination: PaginationOptions
+) => {
+  const sortBy = ALLOWED_REVIEW_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
   return prisma.review.findMany({
     where: { customerId },
+    skip: pagination.skip,
+    take: pagination.limit,
     include: {
-      medicine: {
-        select: {
-          id: true,
-          name: true,
-          imageUrl: true,
-        },
-      },
+      medicine: { select: { id: true, name: true, imageUrl: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: pagination.sortOrder },
   });
 };
 

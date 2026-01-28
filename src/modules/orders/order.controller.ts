@@ -5,6 +5,7 @@ import {
   validateCreateOrderDTO,
   validateUpdateOrderStatusDTO,
 } from "./order.validation";
+import paginationSortingHelper from "../../helpers/paginationSortingHelper";
 
 const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -38,15 +39,17 @@ const getUserOrders = async (
 ) => {
   try {
     const userId = req.user?.id;
-    if (!userId) {
+    if (!userId)
       throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
-    }
 
-    const result = await OrderService.getUserOrders(userId);
+    const pagination = paginationSortingHelper(req.query);
+
+    const result = await OrderService.getUserOrders(userId, pagination);
 
     res.status(200).json({
       success: true,
       message: "Orders fetched successfully",
+      meta: { page: pagination.page, limit: pagination.limit },
       data: result,
     });
   } catch (error) {
@@ -107,15 +110,17 @@ const getSellerOrders = async (
 ) => {
   try {
     const sellerId = req.user?.id;
-    if (!sellerId) {
+    if (!sellerId)
       throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
-    }
 
-    const result = await OrderService.getSellerOrders(sellerId);
+    const pagination = paginationSortingHelper(req.query);
+
+    const result = await OrderService.getSellerOrders(sellerId, pagination);
 
     res.status(200).json({
       success: true,
       message: "Seller orders fetched successfully",
+      meta: { page: pagination.page, limit: pagination.limit },
       data: result,
     });
   } catch (error) {
@@ -172,12 +177,14 @@ const getAllOrders = async (
   try {
     const status =
       typeof req.query.status === "string" ? req.query.status : undefined;
+    const pagination = paginationSortingHelper(req.query);
 
-    const result = await OrderService.getAllOrders(status);
+    const result = await OrderService.getAllOrders(status, pagination);
 
     res.status(200).json({
       success: true,
       message: "Orders fetched successfully",
+      meta: { page: pagination.page, limit: pagination.limit },
       data: result,
     });
   } catch (error) {

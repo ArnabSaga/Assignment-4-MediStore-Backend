@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ReviewService } from "./review.service";
+import paginationSortingHelper from "../../helpers/paginationSortingHelper";
 
 const createReview = async (
   req: Request,
@@ -61,11 +62,17 @@ const getMedicineReviews = async (
   try {
     const medicineId = String(req.params.medicineId);
 
-    const result = await ReviewService.getMedicineReviews(medicineId);
+    const pagination = paginationSortingHelper(req.query);
+
+    const result = await ReviewService.getMedicineReviews(
+      medicineId,
+      pagination
+    );
 
     res.status(200).json({
       success: true,
       message: "Reviews fetched successfully",
+      meta: { page: pagination.page, limit: pagination.limit },
       data: result,
     });
   } catch (error) {
@@ -84,11 +91,14 @@ const getUserReviews = async (
       throw Object.assign(new Error("Unauthorized"), { statusCode: 401 });
     }
 
-    const result = await ReviewService.getUserReviews(customerId);
+    const pagination = paginationSortingHelper(req.query);
+
+    const result = await ReviewService.getUserReviews(customerId, pagination);
 
     res.status(200).json({
       success: true,
       message: "Your reviews fetched successfully",
+      meta: { page: pagination.page, limit: pagination.limit },
       data: result,
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 import { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { generateSlug } from "../../helpers/generateSlug";
+import type { PaginationOptions } from "../../helpers/paginationSortingHelper";
 
 type CreateMedicinePayload = {
   name: string;
@@ -35,6 +36,13 @@ type GetMedicinesFilter = {
   manufacturer?: string;
 };
 
+const ALLOWED_MEDICINE_SORT_FIELDS = new Set([
+  "createdAt",
+  "price",
+  "name",
+  "stock",
+]);
+
 const createMedicine = async (payload: CreateMedicinePayload) => {
   const slug = generateSlug(payload.slug);
 
@@ -60,7 +68,10 @@ const createMedicine = async (payload: CreateMedicinePayload) => {
   });
 };
 
-const getAllMedicines = async (filters: GetMedicinesFilter) => {
+const getAllMedicines = async (
+  filters: GetMedicinesFilter,
+  pagination: PaginationOptions
+) => {
   const where: Prisma.MedicineWhereInput = { isActive: true };
 
   if (filters.categoryId) where.categoryId = filters.categoryId;
@@ -88,14 +99,20 @@ const getAllMedicines = async (filters: GetMedicinesFilter) => {
     };
   }
 
+  const sortBy = ALLOWED_MEDICINE_SORT_FIELDS.has(pagination.sortBy)
+    ? pagination.sortBy
+    : "createdAt";
+
   return prisma.medicine.findMany({
     where,
+    skip: pagination.skip,
+    take: pagination.limit,
     include: {
       category: true,
       seller: { select: { id: true, name: true } },
       reviews: { select: { rating: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { [sortBy]: pagination.sortOrder },
   });
 };
 

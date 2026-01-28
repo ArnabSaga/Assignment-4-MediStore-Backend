@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { MedicineService } from "./medicine.service";
 import { generateSlug } from "../../helpers/generateSlug";
+import paginationSortingHelper from "../../helpers/paginationSortingHelper";
 
 const createMedicine = async (
   req: Request,
@@ -114,11 +115,17 @@ const getAllMedicines = async (
     if (typeof minPrice === "string") filters.minPrice = Number(minPrice);
     if (typeof maxPrice === "string") filters.maxPrice = Number(maxPrice);
 
-    const result = await MedicineService.getAllMedicines(filters);
+    const pagination = paginationSortingHelper(req.query);
+
+    const result = await MedicineService.getAllMedicines(filters, pagination);
 
     res.status(200).json({
       success: true,
       message: "Medicines fetched successfully",
+      meta: {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
       data: result,
     });
   } catch (error) {
