@@ -6,10 +6,9 @@ const router = express.Router();
 
 //* Public routes
 router.get("/", CategoryController.getAllCategories);
-router.get("/:id", CategoryController.getCategoryById);
 
-//* Optional (recommended for frontend SEO)
 router.get("/by-slug/:slug", CategoryController.getCategoryBySlug);
+router.get("/:id", CategoryController.getCategoryById);
 
 //* Admin routes
 router.post(
