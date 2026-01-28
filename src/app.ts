@@ -8,6 +8,11 @@ import { auth } from "./lib/auth";
 import { UserRouter, AdminUserRouter } from "./modules/users/user.route";
 import { CategoryRouter } from "./modules/categories/category.route";
 import { MedicineRouter } from "./modules/medicines/medicine.route";
+import {
+  OrderRouter,
+  SellerOrderRouter,
+  AdminOrderRouter,
+} from "./modules/orders/order.route";
 
 import { notFound } from "./middleware/NotFound";
 import globalErrorHandler from "./middleware/globalErrorHandler";
@@ -23,26 +28,31 @@ app.use(
   })
 );
 
-// Auth routes (better-auth)
+//* Auth routes (better-auth)
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
-// API Routes
+//* API Routes
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/categories", CategoryRouter);
 app.use("/api/v1/medicines", MedicineRouter);
 
-// Admin routes
+//* Orders
+app.use("/api/v1/orders", OrderRouter); // Customer
+app.use("/api/v1/seller/orders", SellerOrderRouter); //Seller
+app.use("/api/v1/admin/orders", AdminOrderRouter); // Admin
+
+//* Admin routes
 app.use("/api/v1/admin/users", AdminUserRouter);
 
-// Home route
+//* Home route
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World To Medi Store");
 });
 
-// 404 handler
+//* 404 handler
 app.use(notFound);
 
-// Global error handler
+//* Global error handler
 app.use(globalErrorHandler);
 
 export default app;
