@@ -1,33 +1,57 @@
-import { Category } from "../../../generated/prisma";
-
-import { generateSlug } from '../../helpers/generateSlug';
-
 import { prisma } from "../../lib/prisma";
+import { generateSlug } from "../../helpers/generateSlug";
 
-const createCategory = async (payload: Omit<Category, "id" | "createdAt">) => {
-  // Validate required fields
+type CreateCategoryPayload = {
+  name: string;
+  slug: string;
+  description?: string;
+};
+
+type UpdateCategoryPayload = {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+};
+
+const createCategory = async (payload: CreateCategoryPayload) => {
   if (!payload.name || !payload.slug) {
-    throw new Error("Category name and slug are required");
+    throw Object.assign(new Error("Category name and slug are required"), {
+      statusCode: 400,
+    });
   }
 
-  // Check for duplicate slug
-  const existing = await prisma.category.findUnique({
-    where: { slug: payload.slug },
+  const name = payload.name.trim();
+  const slug = generateSlug(payload.slug);
+
+  const existing = await prisma.category.findFirst({
+    where: {
+      OR: [{ slug }, { name }],
+    },
+    select: { id: true, name: true, slug: true },
   });
 
   if (existing) {
-    throw new Error("Category with this slug already exists");
+    throw Object.assign(
+      new Error("Category with this name or slug already exists"),
+      {
+        statusCode: 409,
+      }
+    );
   }
 
-  const result = await prisma.category.create({
-    data: payload,
+  return prisma.category.create({
+    data: {
+      name,
+      slug,
+      ...(payload.description !== undefined
+        ? { description: payload.description }
+        : {}),
+    },
   });
-
-  return result;
 };
 
 const getAllCategories = async () => {
-  const result = await prisma.category.findMany({
+  return prisma.category.findMany({
     include: {
       medicines: {
         where: { isActive: true },
@@ -38,12 +62,12 @@ const getAllCategories = async () => {
         },
       },
     },
+    orderBy: { createdAt: "desc" },
   });
-  return result;
 };
 
 const getCategoryById = async (id: string) => {
-  const result = await prisma.category.findUniqueOrThrow({
+  return prisma.category.findUniqueOrThrow({
     where: { id },
     include: {
       medicines: {
@@ -51,68 +75,73 @@ const getCategoryById = async (id: string) => {
       },
     },
   });
-  return result;
 };
 
-const updateCategory = async (
-  id: string,
-  payload: Partial<Omit<Category, "id" | "createdAt">>
-) => {
-  if (payload.name && !payload.slug) {
-    payload.slug = generateSlug(payload.name);
+const getCategoryBySlug = async (slug: string) => {
+  return prisma.category.findUniqueOrThrow({
+    where: { slug },
+    include: {
+      medicines: { where: { isActive: true } },
+    },
+  });
+};
+
+const updateCategory = async (id: string, payload: UpdateCategoryPayload) => {
+  const nextPayload: UpdateCategoryPayload = { ...payload };
+  if (nextPayload.name && !nextPayload.slug) {
+    nextPayload.slug = generateSlug(nextPayload.name);
   }
 
-  if (payload.slug) {
+  if (nextPayload.slug) {
     const existing = await prisma.category.findUnique({
-      where: { slug: payload.slug },
+      where: { slug: nextPayload.slug },
+      select: { id: true },
     });
 
     if (existing && existing.id !== id) {
-      const error = new Error("Category with this slug already exists") as any;
-      error.statusCode = 400;
-      throw error;
+      throw Object.assign(new Error("Category with this slug already exists"), {
+        statusCode: 409,
+      });
     }
   }
 
-  const cleanData: any = {};
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      cleanData[key] = value;
-    }
+  const cleanData: Record<string, any> = {};
+  Object.entries(nextPayload).forEach(([key, value]) => {
+    if (value !== undefined) cleanData[key] = value;
   });
 
   if (Object.keys(cleanData).length === 0) {
-    throw new Error("No fields to update");
+    throw Object.assign(new Error("No fields to update"), { statusCode: 400 });
   }
 
-  const result = await prisma.category.update({
+  return prisma.category.update({
     where: { id },
     data: cleanData,
   });
-  return result;
 };
 
 const deleteCategory = async (id: string) => {
-  // Check if category has medicines
   const medicinesCount = await prisma.medicine.count({
     where: { categoryId: id },
   });
 
   if (medicinesCount > 0) {
-    throw new Error(
-      `Cannot delete category with ${medicinesCount} medicine(s). Please delete medicines first or reassign them to another category.`
+    throw Object.assign(
+      new Error(
+        `Cannot delete category with ${medicinesCount} medicine(s). Delete/reassign medicines first.`
+      ),
+      { statusCode: 409 }
     );
   }
 
-  await prisma.category.delete({
-    where: { id },
-  });
+  await prisma.category.delete({ where: { id } });
 };
 
 export const CategoryService = {
   createCategory,
   getAllCategories,
   getCategoryById,
+  getCategoryBySlug,
   updateCategory,
   deleteCategory,
 };

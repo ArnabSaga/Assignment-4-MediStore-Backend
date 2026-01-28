@@ -4,26 +4,29 @@ import { CategoryController } from "./category.controller";
 
 const router = express.Router();
 
-// Public routes
+//* Public routes
 router.get("/", CategoryController.getAllCategories);
 router.get("/:id", CategoryController.getCategoryById);
 
-// Admin routes
+//* Optional (recommended for frontend SEO)
+router.get("/by-slug/:slug", CategoryController.getCategoryBySlug);
+
+//* Admin routes
 router.post(
   "/",
-  auth({ roles: [UserRole.ADMIN] }),
+  auth({ roles: [UserRole.ADMIN], requireVerifiedEmail: true }),
   CategoryController.createCategory
 );
 
 router.put(
   "/:id",
-  auth({ roles: [UserRole.ADMIN] }),
+  auth({ roles: [UserRole.ADMIN], requireVerifiedEmail: true }),
   CategoryController.updateCategory
 );
 
 router.delete(
   "/:id",
-  auth({ roles: [UserRole.ADMIN] }),
+  auth({ roles: [UserRole.ADMIN], requireVerifiedEmail: true }),
   CategoryController.deleteCategory
 );
 
