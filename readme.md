@@ -31,15 +31,15 @@ Managing an online medicine store requires careful handling of:
 
 ## 🛠 Tech Stack
 
-| Technology     | Purpose              | Why Chosen                                                         |
-| -------------- | -------------------- | ------------------------------------------------------------------ |
-| **Node.js**    | Server runtime       | Lightweight, event-driven, perfect for I/O-heavy APIs              |
-| **Express.js** | Web framework        | Minimal, flexible, industry-standard for REST APIs                 |
-| **TypeScript** | Programming language | Type safety, better developer experience, fewer runtime errors     |
-| **Prisma ORM** | Database access      | Type-safe queries, auto-generated migrations, excellent DX         |
-| **PostgreSQL** | Database             | Reliable relational DB, ACID compliance, great for structured data |
-| **JWT Auth**   | Authentication       | Stateless, secure, scalable token-based authentication             |
-| **Postman**    | API testing          | Comprehensive API testing, collection management, collaboration    |
+| Technology      | Purpose              | Why Chosen                                                         |
+| --------------- | -------------------- | ------------------------------------------------------------------ |
+| **Node.js**     | Server runtime       | Lightweight, event-driven, perfect for I/O-heavy APIs              |
+| **Express.js**  | Web framework        | Minimal, flexible, industry-standard for REST APIs                 |
+| **TypeScript**  | Programming language | Type safety, better developer experience, fewer runtime errors     |
+| **Prisma ORM**  | Database access      | Type-safe queries, auto-generated migrations, excellent DX         |
+| **PostgreSQL**  | Database             | Reliable relational DB, ACID compliance, great for structured data |
+| **Better-Auth** | Authentication       | Modern session & token management with built-in email verification |
+| **Postman**     | API testing          | Comprehensive API testing, collection management, collaboration    |
 
 ---
 
@@ -59,7 +59,7 @@ The API follows a **layered, modular architecture**:
                      │
 ┌────────────────────▼────────────────────────────────┐
 │  Middleware Stack                                   │
-│  ├─ Auth Middleware (JWT verification)             │
+│  ├─ Auth Middleware (Better-Auth verification)     │
 │  ├─ Error Handler (Prisma-aware)                   │
 │  └─ Not Found Handler                              │
 └────────────────────┬────────────────────────────────┘
@@ -99,13 +99,13 @@ The API follows a **layered, modular architecture**:
 
 ### Authentication Endpoints
 
-| Method | Endpoint             | Customer | Seller | Admin | Description                    |
-| ------ | -------------------- | :------: | :----: | :---: | ------------------------------ |
-| `POST` | `/auth/register`     |    ✅    |   ✅   |  ✅   | User registration with email   |
-| `POST` | `/auth/login`        |    ✅    |   ✅   |  ✅   | User login (returns JWT token) |
-| `GET`  | `/auth/me`           |    ✅    |   ✅   |  ✅   | Get current authenticated user |
-| `POST` | `/auth/logout`       |    ✅    |   ✅   |  ✅   | Logout & invalidate session    |
-| `POST` | `/auth/verify-email` |    ✅    |   ✅   |  ✅   | Verify email with token        |
+| Method | Endpoint             | Customer | Seller | Admin | Description                        |
+| ------ | -------------------- | :------: | :----: | :---: | ---------------------------------- |
+| `POST` | `/auth/register`     |    ✅    |   ✅   |  ✅   | User registration with email       |
+| `POST` | `/auth/login`        |    ✅    |   ✅   |  ✅   | User login (returns session token) |
+| `GET`  | `/auth/me`           |    ✅    |   ✅   |  ✅   | Get current authenticated user     |
+| `POST` | `/auth/logout`       |    ✅    |   ✅   |  ✅   | Logout & invalidate session        |
+| `POST` | `/auth/verify-email` |    ✅    |   ✅   |  ✅   | Verify email with token            |
 
 ### Categories Endpoints
 
@@ -166,12 +166,12 @@ The API follows a **layered, modular architecture**:
 ```
 POST /categories
 ├─ Request Body: { name: "Pain Relief", description: "..." }
-├─ Header: Authorization: Bearer <JWT_TOKEN>
+├─ Header: Authorization: Bearer <SESSION_TOKEN>
 │
 ├─ Route Handler → routes/category.route.ts
 │
 ├─ Auth Middleware
-│   └─ Verifies JWT token
+│   └─ Verifies Better-Auth session token
 │   └─ Extracts user info (userId, role)
 │   └─ Checks if role === ADMIN
 │   └─ Checks if user.emailVerified === true
@@ -237,8 +237,8 @@ We provide pre-configured Postman collections for easy API testing:
 
 ```
 baseUrl          = http://localhost:5000/api/v1
-token            = <YOUR_JWT_TOKEN_HERE>
-adminToken       = <ADMIN_JWT_TOKEN_HERE>
+token            = <YOUR_SESSION_TOKEN_HERE>
+adminToken       = <ADMIN_SESSION_TOKEN_HERE>
 categoryId       = <TEST_CATEGORY_ID>
 medicineId       = <TEST_MEDICINE_ID>
 orderId          = <TEST_ORDER_ID>
@@ -252,6 +252,8 @@ All requests automatically include:
 Authorization    = Bearer {{token}}
 Content-Type     = application/json
 ```
+
+Note: Better-Auth handles session tokens which are sent via `Authorization: Bearer <token>` header or as secure HTTP-only cookies depending on configuration.
 
 #### Example Postman Requests
 
@@ -326,7 +328,7 @@ Content-Type: application/json
 - 🗄️ **Prisma ORM** – Type-safe database queries with auto-generated migrations
 - 🛡️ **Centralized Error Handling** – Prisma-aware error middleware
 - 📄 **Pagination & Sorting** – Efficient data retrieval with meta information
-- 🔒 **Secure Authentication** – JWT token-based stateless auth
+- 🔒 **Secure Authentication** – Better-Auth with session & token management
 - 📧 **Email Verification** – Admin routes require verified email (requireVerifiedEmail = true)
 - 🚀 **Production-Ready** – Structured logging, error handling, validation
 - 🧪 **Postman Ready** – Pre-configured collections for testing
@@ -378,9 +380,9 @@ BASE_URL=http://localhost:5000
 # Database
 DATABASE_URL=postgresql://username:password@localhost:5432/medistore
 
-# Authentication
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-JWT_EXPIRES_IN=7d
+# Better-Auth Configuration
+BETTER_AUTH_SECRET=your_super_secret_key_change_this_in_production
+BETTER_AUTH_URL=http://localhost:5000/api/auth
 
 # Email (Optional)
 MAIL_HOST=smtp.gmail.com
