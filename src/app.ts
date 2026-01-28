@@ -4,7 +4,7 @@ import { toNodeHandler } from "better-auth/node";
 
 import { auth } from "./lib/auth";
 
-// Route imports
+//* Route imports
 import { UserRouter, AdminUserRouter } from "./modules/users/user.route";
 import { CategoryRouter } from "./modules/categories/category.route";
 import { MedicineRouter } from "./modules/medicines/medicine.route";
@@ -13,6 +13,7 @@ import {
   SellerOrderRouter,
   AdminOrderRouter,
 } from "./modules/orders/order.route";
+import { ReviewRouter } from "./modules/reviews/review.route";
 
 import { notFound } from "./middleware/NotFound";
 import globalErrorHandler from "./middleware/globalErrorHandler";
@@ -35,11 +36,12 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use("/api/v1/users", UserRouter);
 app.use("/api/v1/categories", CategoryRouter);
 app.use("/api/v1/medicines", MedicineRouter);
+app.use("/api/v1/reviews", ReviewRouter);
 
 //* Orders
-app.use("/api/v1/orders", OrderRouter); // Customer
-app.use("/api/v1/seller/orders", SellerOrderRouter); //Seller
-app.use("/api/v1/admin/orders", AdminOrderRouter); // Admin
+app.use("/api/v1/orders", OrderRouter); //* Customer
+app.use("/api/v1/seller/orders", SellerOrderRouter); //* Seller
+app.use("/api/v1/admin/orders", AdminOrderRouter); //* Admin
 
 //* Admin routes
 app.use("/api/v1/admin/users", AdminUserRouter);
