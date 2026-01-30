@@ -46,33 +46,34 @@ model User {
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String   @unique
+  id        String   @id
   expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([token])
   @@index([userId])
-  @@index([expiresAt])
-  @@map("sessions")
+  @@map("session")
 }
 
-
 model Account {
-  id           String    @id @default(uuid())
-  userId       String
-  accountId    String
-  providerId   String
-  password     String?
-  accessToken  String?
-  refreshToken String?
-  expiresAt    DateTime?
+  id                   String   @id @default(uuid())
+  userId               String
+  accountId            String
+  providerId           String
+  password             String?
+  accessToken          String?
+  refreshToken         String?
+  idToken              String?     
+  scope                String?    
+
+  accessTokenExpiresAt DateTime?   
+  expiresAt            DateTime?   
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -83,6 +84,19 @@ model Account {
   @@index([userId])
   @@index([providerId])
   @@map("accounts")
+}
+
+model verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+  @@map("verification")
 }
 
 model Category {
